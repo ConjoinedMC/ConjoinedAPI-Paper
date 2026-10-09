@@ -20,19 +20,19 @@ final class RequestExecutor implements AutoCloseable {
     int availablePermits() { return permits.availablePermits(); }
     <T> CompletableFuture<T> send(HttpRequest request, Duration timeout, Function<Response, T> decode) {
         if (!permits.tryAcquire()) return CompletableFuture.failedFuture(new IllegalStateException("Too many in-flight requests"));
-        CompletableFuture<T> result = new CompletableFuture<>();
+        Operation<T> result = new Operation<>();
         AtomicReference<CompletableFuture<?>> upstream = new AtomicReference<>();
         AtomicReference<LimitedBody> body = new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> alarm = new AtomicReference<>();
         active.add(result);
-        result.whenComplete((value, error) -> {
+        result.cleanup = failed -> {
             var timer = alarm.get(); if (timer != null) timer.cancel(false);
-            if (error != null) {
+            if (failed) {
                 var subscriber = body.get(); if (subscriber != null) subscriber.cancel();
                 var transfer = upstream.get(); if (transfer != null) transfer.cancel(true);
             }
             active.remove(result); permits.release();
-        });
+        };
         try {
             alarm.set(deadlines.schedule(() -> result.completeExceptionally(new TimeoutException("ConjoinedDB operation deadline exceeded")), timeout.toNanos(), TimeUnit.NANOSECONDS));
             var transfer = http.sendAsync(request, ignored -> {
@@ -52,6 +52,22 @@ final class RequestExecutor implements AutoCloseable {
         } catch (RuntimeException error) { result.completeExceptionally(error); }
         if (result.isDone() && alarm.get() != null) alarm.get().cancel(false);
         return result;
+    }
+    private static final class Operation<T> extends CompletableFuture<T> {
+        private java.util.function.Consumer<Boolean> cleanup;
+        private boolean terminal;
+        @Override public synchronized boolean complete(T value) {
+            if (terminal) return false;
+            terminal = true; cleanup.accept(false); return super.complete(value);
+        }
+        @Override public synchronized boolean completeExceptionally(Throwable error) {
+            if (terminal) return false;
+            terminal = true; cleanup.accept(true); return super.completeExceptionally(error);
+        }
+        @Override public synchronized boolean cancel(boolean interrupt) {
+            if (terminal) return false;
+            terminal = true; cleanup.accept(true); return super.cancel(interrupt);
+        }
     }
     static final class LimitedBody implements HttpResponse.BodySubscriber<byte[]> {
         private final HttpResponse.BodySubscriber<byte[]> delegate = HttpResponse.BodySubscribers.ofByteArray();
