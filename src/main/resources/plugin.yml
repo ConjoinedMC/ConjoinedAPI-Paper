@@ -1,0 +1,5 @@
+name: ConjoinedAPI
+version: 0.1.0
+main: io.conjoined.api.ConjoinedApiPlugin
+api-version: '1.21'
+description: Asynchronous authenticated client for ConjoinedDB
