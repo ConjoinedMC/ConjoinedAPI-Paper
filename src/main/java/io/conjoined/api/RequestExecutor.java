@@ -25,12 +25,10 @@ final class RequestExecutor implements AutoCloseable {
         AtomicReference<LimitedBody> body = new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> alarm = new AtomicReference<>();
         active.add(result);
-        result.cleanup = failed -> {
+        result.cleanup = ignored -> {
             var timer = alarm.get(); if (timer != null) timer.cancel(false);
-            if (failed) {
-                var subscriber = body.get(); if (subscriber != null) subscriber.cancel();
-                var transfer = upstream.get(); if (transfer != null) transfer.cancel(true);
-            }
+            var subscriber = body.get(); if (subscriber != null) subscriber.cancel();
+            var transfer = upstream.get(); if (transfer != null) transfer.cancel(true);
             active.remove(result); permits.release();
         };
         try {
@@ -55,18 +53,18 @@ final class RequestExecutor implements AutoCloseable {
     }
     private static final class Operation<T> extends CompletableFuture<T> {
         private java.util.function.Consumer<Boolean> cleanup;
-        private boolean terminal;
-        @Override public synchronized boolean complete(T value) {
-            if (terminal) return false;
-            terminal = true; cleanup.accept(false); return super.complete(value);
+        private final java.util.concurrent.atomic.AtomicBoolean terminal = new java.util.concurrent.atomic.AtomicBoolean();
+        @Override public boolean complete(T value) {
+            if (!terminal.compareAndSet(false, true)) return false;
+            cleanup.accept(false); return super.complete(value);
         }
-        @Override public synchronized boolean completeExceptionally(Throwable error) {
-            if (terminal) return false;
-            terminal = true; cleanup.accept(true); return super.completeExceptionally(error);
+        @Override public boolean completeExceptionally(Throwable error) {
+            if (!terminal.compareAndSet(false, true)) return false;
+            cleanup.accept(true); return super.completeExceptionally(error);
         }
-        @Override public synchronized boolean cancel(boolean interrupt) {
-            if (terminal) return false;
-            terminal = true; cleanup.accept(true); return super.cancel(interrupt);
+        @Override public boolean cancel(boolean interrupt) {
+            if (!terminal.compareAndSet(false, true)) return false;
+            cleanup.accept(true); return super.cancel(interrupt);
         }
     }
     static final class LimitedBody implements HttpResponse.BodySubscriber<byte[]> {
@@ -92,8 +90,8 @@ final class RequestExecutor implements AutoCloseable {
                 failed = true; subscription.cancel(); delegate.onError(new IllegalStateException("Response too large"));
             } else delegate.onNext(buffers);
         }
-        @Override public synchronized void onError(Throwable error) { if (!failed) delegate.onError(error); }
-        @Override public synchronized void onComplete() { if (!failed) delegate.onComplete(); }
+        @Override public synchronized void onError(Throwable error) { if (!failed) { failed = true; delegate.onError(error); } }
+        @Override public synchronized void onComplete() { if (!failed) { failed = true; delegate.onComplete(); } }
     }
     @Override public void close() {
         deadlines.shutdownNow();
