@@ -24,13 +24,13 @@ final class RequestExecutor implements AutoCloseable {
         AtomicReference<CompletableFuture<?>> upstream = new AtomicReference<>();
         AtomicReference<LimitedBody> body = new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> alarm = new AtomicReference<>();
-        active.add(result);
         result.cleanup = ignored -> {
             var timer = alarm.get(); if (timer != null) timer.cancel(false);
             var subscriber = body.get(); if (subscriber != null) subscriber.cancel();
             var transfer = upstream.get(); if (transfer != null) transfer.cancel(true);
             active.remove(result); permits.release();
         };
+        active.add(result);
         try {
             alarm.set(deadlines.schedule(() -> result.completeExceptionally(new TimeoutException("ConjoinedDB operation deadline exceeded")), timeout.toNanos(), TimeUnit.NANOSECONDS));
             var transfer = http.sendAsync(request, ignored -> {
