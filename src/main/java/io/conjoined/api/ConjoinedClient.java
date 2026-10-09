@@ -49,7 +49,7 @@ public final class ConjoinedClient implements AutoCloseable {
         return send(request(owner, key).DELETE().build()).thenApply(response -> { check(response, 204); return null; });
     }
     private HttpRequest.Builder request(String owner, String key) {
-        if (!key.matches("[a-zA-Z0-9_.-]{1,128}")) throw new IllegalArgumentException("Invalid key");
+        if (!key.matches("[a-zA-Z0-9_.-]{1,128}") || key.equals(".") || key.equals("..")) throw new IllegalArgumentException("Invalid key");
         return HttpRequest.newBuilder(endpoint.resolve("/v1/" + namespace + "/" + owner + "/" + key))
                 .timeout(Duration.ofSeconds(10)).header("Authorization", "Bearer " + token);
     }
