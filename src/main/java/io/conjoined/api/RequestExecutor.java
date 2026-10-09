@@ -35,20 +35,20 @@ final class RequestExecutor implements AutoCloseable {
             alarm.set(deadlines.schedule(() -> result.completeExceptionally(new TimeoutException("ConjoinedDB operation deadline exceeded")), timeout.toNanos(), TimeUnit.NANOSECONDS));
             var transfer = http.sendAsync(request, ignored -> {
                 LimitedBody subscriber = new LimitedBody(); body.set(subscriber);
-                if (result.isDone()) subscriber.cancel();
+                if (result.terminal.get()) subscriber.cancel();
                 return subscriber;
             });
             upstream.set(transfer);
             transfer.whenComplete((response, error) -> {
                 if (error != null) result.completeExceptionally(error);
-                else if (!result.isDone()) {
+                else if (!result.terminal.get()) {
                     try { result.complete(decode.apply(new Response(response.statusCode(), response.body()))); }
                     catch (RuntimeException failure) { result.completeExceptionally(failure); }
                 }
             });
-            if (result.isDone()) transfer.cancel(true);
+            if (result.terminal.get()) transfer.cancel(true);
         } catch (RuntimeException error) { result.completeExceptionally(error); }
-        if (result.isDone() && alarm.get() != null) alarm.get().cancel(false);
+        if (result.terminal.get() && alarm.get() != null) alarm.get().cancel(false);
         return result;
     }
     private static final class Operation<T> extends CompletableFuture<T> {
