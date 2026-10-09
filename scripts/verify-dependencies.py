@@ -11,6 +11,19 @@ for line in Path("dependencies.lock").read_text().splitlines():
         raise SystemExit(f"Dependency checksum mismatch: {filename}")
     components.append({"type": "library", "group": group, "name": name,
                        "version": version, "purl": f"pkg:maven/{group}/{name}@{version}"})
+
+root = json.loads(Path("target/dependency-tree.json").read_text())
+resolved = set()
+def visit(node):
+    if node is not root:
+        resolved.add((node["groupId"], node["artifactId"], node["version"]))
+    for child in node.get("children", []):
+        visit(child)
+visit(root)
+locked = {(item["group"], item["name"], item["version"]) for item in components}
+if resolved != locked:
+    raise SystemExit("Resolved dependency graph differs from dependencies.lock")
+
 Path("target/dependencies.cdx.json").write_text(json.dumps({
     "bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1, "components": components}))
 print(f"Verified {len(components)} dependency checksums")
