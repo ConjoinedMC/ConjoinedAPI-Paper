@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib
 import json
+import re
 
 components = []
 for line in Path("dependencies.lock").read_text().splitlines():
@@ -14,13 +15,18 @@ for line in Path("dependencies.lock").read_text().splitlines():
 
 root = json.loads(Path("target/dependency-tree.json").read_text())
 resolved = set()
+def coordinate(group, name, version):
+    # copy-dependencies may canonicalize a pinned timestamp to its SNAPSHOT base.
+    # JAR hashes still enforce the exact bytes; POMs pin the retrievable timestamp.
+    version = re.sub(r"-\d{8}\.\d{6}-\d+$", "-SNAPSHOT", version)
+    return group, name, version
 def visit(node):
     if node is not root:
-        resolved.add((node["groupId"], node["artifactId"], node["version"]))
+        resolved.add(coordinate(node["groupId"], node["artifactId"], node["version"]))
     for child in node.get("children", []):
         visit(child)
 visit(root)
-locked = {(item["group"], item["name"], item["version"]) for item in components}
+locked = {coordinate(item["group"], item["name"], item["version"]) for item in components}
 if resolved != locked:
     raise SystemExit("Resolved dependency graph differs from dependencies.lock")
 

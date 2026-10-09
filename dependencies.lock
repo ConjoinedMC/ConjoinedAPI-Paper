@@ -8,7 +8,7 @@ b372a037d4230aa57fbeffdef30fd6123f9c0c2db85d0aced00c91b974f33f99 com.google.guav
 88241573467ddca44ffd4d74aa04c2bbfd11bf7c17e0c342c94c9de7a70a7c64 com.google.j2objc j2objc-annotations 3.0.0 j2objc-annotations-3.0.0.jar
 4e69696892b88b41c55d49ab2fdcc21eead92bf54acc588c0050596c3b75199c com.googlecode.json-simple json-simple 1.1.1 json-simple-1.1.1.jar
 c8ee4136e474ac7723ca2b432ec8d1a2bc88ef7d1ec57c314ba9e33cdc83dd75 com.mojang brigadier 1.3.10 brigadier-1.3.10.jar
-3feb8489c6a603f5b7bb9f623cf67dae42b893827f8b5fedb2c2b69648c168a0 io.papermc.paper paper-api 1.21.4-R0.1-SNAPSHOT paper-api-1.21.4-R0.1-SNAPSHOT.jar
+3feb8489c6a603f5b7bb9f623cf67dae42b893827f8b5fedb2c2b69648c168a0 io.papermc.paper paper-api 1.21.4-R0.1-20250925.065901-231 paper-api-1.21.4-R0.1-SNAPSHOT.jar
 cffeb6673bdf1e6e4377d684df2f55ac359cf5cf6df613e05e62deeea500936a it.unimi.dsi fastutil 8.5.15 fastutil-8.5.15.jar
 91c77044a50c481636c32d916fd89c9118a72195390452c81065080f957de7ff javax.inject javax.inject 1 javax.inject-1.jar
 14ce3a98f4d1814646cf44644a28ad4c9d6e12c58d83ee98b5ff5e755d4897cf net.kyori adventure-api 4.20.0 adventure-api-4.20.0.jar
