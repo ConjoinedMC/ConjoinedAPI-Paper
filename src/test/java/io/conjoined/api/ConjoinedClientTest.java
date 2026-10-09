@@ -15,6 +15,8 @@ class ConjoinedClientTest {
     @Test void validatesBeforeNetworkAccess() {
         try (var client = new ConjoinedClient(URI.create("https://localhost"), "example", "a".repeat(32))) {
             assertThrows(IllegalArgumentException.class, () -> client.getGlobal("../escape"));
+            assertThrows(IllegalArgumentException.class, () -> client.getGlobal("."));
+            assertThrows(IllegalArgumentException.class, () -> client.getGlobal(".."));
             assertThrows(IllegalArgumentException.class, () -> client.putGlobal("key", new byte[65537]));
         }
     }
