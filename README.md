@@ -1,12 +1,12 @@
 # ConjoinedAPI for Paper
 
-Java 21 asynchronous client and lightweight Paper plugin targeting Paper 1.21.4.
+Java 25 asynchronous client and lightweight Paper plugin targeting Paper 26.3.
 The API talks to ConjoinedDB on Velocity using HTTPS; it never opens the database directly.
 Each consuming plugin constructs its own client with a namespace-scoped service credential.
 
 ## Build and install
 
-With JDK 21 and Maven 3.9+, run `mvn verify`. Copy
+With JDK 25 and Maven 3.9+, run `mvn verify`. Copy
 `target/conjoinedapi-paper-0.1.0-SNAPSHOT.jar` into Paper's `plugins` folder.
 Consuming plugins declare `depend: [ConjoinedAPI]` in their `plugin.yml` and compile against
 this artifact with Maven scope `provided`. Run `mvn install` to make the snapshot available locally.
